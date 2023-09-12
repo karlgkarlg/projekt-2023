@@ -1,3 +1,4 @@
+# detekter r peaks i datasættet data_ecg
 sRate <- 500
 
 ecg <- data.frame(Volts = data_ecg$SNUADC.ECG_II[300000:310000],
