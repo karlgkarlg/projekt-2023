@@ -42,3 +42,24 @@ plotart = data.frame(Time = data_art$Time[rpeakstid2[2]:rpeakstid2[3]], Tryk = d
 
 ggplot(plotart, aes(x=Time, y=Tryk)) +
   geom_line()
+
+#################################################################
+
+#Find tidspunkt for start af induktion ved at finde tiden til første værdi over 0
+ 
+ggplot(plotart, aes(x = Time, y = Tryk)) +
+  geom_line()
+
+anes = data_ane$Orchestra.PPF20_VOL > 0 OR 
+
+data_ane$Time[90]
+
+diff_anes = diff(anes)
+
+start_ane = data_ane$Time[which(diff_anes != 0)]
+
+start_optag = start_ane - 60
+slut_optag = start_ane + 600
+
+
+#Next up hent alt relevant data for inluderede cases til R
