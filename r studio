@@ -1,3 +1,9 @@
+# Load ECG data for Case ID 241
+data_ecg = VitalDBR::load_case(tname = 'SNUADC/ECG_II', caseid = 241)
+
+################################################################
+
+
 # detekter r peaks i datasættet data_ecg i tidsrummet 30000 til 31000
 sRate <- 500
 
@@ -12,6 +18,8 @@ ggplot(ecg,
   geom_vline(data.frame(p = rpeaks),
              mapping = aes(xintercept = p),
              linetype="dashed",color = "red")
+
+################################################################
 
 # Load ECG data for Case ID 241
 data_ecg = VitalDBR::load_case(tname = 'SNUADC/ECG_II', caseid = 241)
