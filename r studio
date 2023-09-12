@@ -20,3 +20,11 @@ ggplot(ecg,
              linetype="dashed",color = "red")
 
 ################################################################
+
+#Definér dataframe og plot derefter tilsvarende data mellem værdierne
+
+plotart = data.frame(Time = data_art$Time[37931:39443], Tryk = data_art$SNUADC.ART[37931:39443])
+
+ggplot(plotart, aes(x=Time, y=Tryk)) +
+  geom_line()
+
