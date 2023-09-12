@@ -3,7 +3,11 @@ data_ecg = VitalDBR::load_case(tname = 'SNUADC/ECG_II', caseid = 241)
 
 ################################################################
 
+# hent datapunkter for snuadc/art i case 164
+data_art <- VitalDBR::load_case(tname = 'SNUADC/ART', caseid = 268)
 
+
+###########################################
 # detekter r peaks i datasættet data_ecg i tidsrummet 30000 til 31000
 sRate <- 500
 
