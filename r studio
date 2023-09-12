@@ -1,3 +1,13 @@
-hej drenge
-hej karl
-Hej hej
+sRate <- 500
+
+ecg <- data.frame(Volts = data_ecg$SNUADC.ECG_II[300000:310000],
+                  Seconds = data_ecg$Time[300000:310000]-data_ecg$Time[300000])
+rpeaks <- detect_rpeaks(ecg$Volts, sRate)
+
+ggplot(ecg,
+       aes(x = Seconds,
+           y = Volts)) +
+  geom_line() + theme_bw() +
+  geom_vline(data.frame(p = rpeaks),
+             mapping = aes(xintercept = p),
+             linetype="dashed",color = "red")
