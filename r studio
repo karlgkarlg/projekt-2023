@@ -13,5 +13,5 @@ ggplot(ecg,
              mapping = aes(xintercept = p),
              linetype="dashed",color = "red")
 
-# Load ECG data
+# Load ECG data for Case ID 241
 data_ecg = VitalDBR::load_case(tname = 'SNUADC/ECG_II', caseid = 241)
