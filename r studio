@@ -63,3 +63,12 @@ slut_optag = start_ane + 600
 
 
 #Next up hent alt relevant data for inluderede cases til R
+
+
+#Læs excel fil til Rstudio
+
+library(readxl)
+
+file_path <- "find filepath til excel filen"
+
+"navn på konstant man vil definere" <- read_xlsx(file_path)
