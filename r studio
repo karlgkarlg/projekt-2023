@@ -32,3 +32,13 @@ plotart = data.frame(Time = data_art$Time[37931:39443], Tryk = data_art$SNUADC.A
 ggplot(plotart, aes(x=Time, y=Tryk)) +
   geom_line()
 
+###############################################
+
+rpeakstid2 = rpeakstid-800
+
+#Definér dataframe og plot derefter tilsvarende data mellem værdierne
+
+plotart = data.frame(Time = data_art$Time[rpeakstid2[2]:rpeakstid2[3]], Tryk = data_art$SNUADC.ART[rpeakstid2[2]:rpeakstid2[3]])
+
+ggplot(plotart, aes(x=Time, y=Tryk)) +
+  geom_line()
