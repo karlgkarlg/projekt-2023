@@ -5,6 +5,8 @@ library(usethis)
 library(VitalDBR)
 library(rsleep)
 library(waveformtools)
+library(gsignal)
+
 
 
 cases <- load_VDB("https://api.vitaldb.net/cases")
