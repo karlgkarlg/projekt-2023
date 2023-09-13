@@ -3,6 +3,9 @@ library(patchwork)
 library(devtools)
 library(usethis)
 library(VitalDBR)
+library(rsleep)
+library(waveformtools)
+
 
 cases <- load_VDB("https://api.vitaldb.net/cases")
 
