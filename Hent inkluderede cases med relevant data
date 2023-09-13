@@ -1,0 +1,66 @@
+volatile_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+  
+  dplyr::filter(tname == "Primus/MAC")
+
+nrow(volatile_cases)
+
+
+
+TIVA_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+  
+  dplyr::filter(tname == "Orchestra/PPF20_VOL")
+
+nrow(TIVA_cases)
+
+
+
+
+library(readxl)
+
+file_path <- "C:/Users/jenss/Downloads/CASEID1.xlsx"
+
+inkluderet <- read_xlsx(file_path)
+
+caseid_inkluderet = inkluderet$Caseid
+
+
+art_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+  
+  dplyr::filter(caseid %in% caseid_inkluderet) %>% 
+  
+  dplyr::filter(tname == "SNUADC/ART")
+
+nrow(art_cases)
+
+
+setwd("~/Data cases/")
+
+for(i in 2:42) {
+  
+  tracks_case <- art_cases[i,]
+  
+  data_art <- load_case(tname = 'SNUADC/ART', caseid = tracks_case$caseid)
+  
+
+  data_ecg <- load_case(tname = 'SNUADC/ECG_II', caseid = tracks_case$caseid)
+  
+  
+  if (art_cases$caseid[i] %in% volatile_cases$caseid) {
+    
+    data_volatile = VitalDBR::load_case(tname = 'Primus/MAC', caseid = tracks_case$caseid)
+    
+  } else{data_volatile = NA}
+  
+  
+  
+  if (art_cases$caseid[i] %in% TIVA_cases$caseid) {
+    
+    data_TIVA = VitalDBR::load_case(tname = 'Orchestra/PPF20_VOL', caseid = tracks_case$caseid)
+    
+  } else{data_TIVA = NA}
+  
+  save(data_art, data_ecg, data_TIVA, data_volatile, file = paste0(as.character(art_cases[i,1]), ".RData"))
+  
+  
+  closeAllConnections() ## Otherwise connections will stack up.
+}
