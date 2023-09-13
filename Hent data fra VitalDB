@@ -1,0 +1,53 @@
+cases <- VitalDBR::load_VDB("https://api.vitaldb.net/cases") %>%
+
+      dplyr::filter(#approach=="Open",
+
+                approach=="Videoscopic" | approach=="Robotic",
+
+                #department=="General surgery",
+
+                ane_type=="General",
+
+                aline1 != ""
+
+      )
+
+      #dplyr::select(caseid, opstart, opend)
+
+knitr::kable(head(cases))
+
+ 
+
+Monit_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+
+            dplyr::filter(tname == "SNUADC/ART" | tname == "SNUADC/PLETH" | tname == "Primus/AWP" | tname == "Solar8000/NIBP_DBP" ) %>%
+
+            count(caseid) %>%
+
+            dplyr::filter(n == 4) %>%
+
+            select(caseid)
+
+head(Monit_cases)
+
+nrow(Monit_cases)
+
+ 
+
+casesWmonit <- merge(x=Monit_cases,y=cases,by="caseid")
+
+ 
+
+volatile_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+
+            dplyr::filter(tname == "Primus/MAC")
+
+nrow(volatile_cases)
+
+ 
+
+TIVA_cases = VitalDBR::load_VDB("https://api.vitaldb.net/trks") %>%
+
+            dplyr::filter(tname == "Orchestra/PPF20_VOL")
+
+nrow(TIVA_cases)
