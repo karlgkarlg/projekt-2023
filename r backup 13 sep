@@ -1,1 +1,162 @@
+library(tidyverse)
+library(patchwork)
+library(devtools)
+library(usethis)
+library(VitalDBR)
+
+cases <- load_VDB("https://api.vitaldb.net/cases")
+
+cases_old = cases %>% 
+  filter(age >= 65) %>% 
+  select(sex, age, weight, height, asa, preop_k, preop_gluc, preop_hb, preop_dm) %>% 
+  mutate(bmi = weight/((height/100)^2))
+
+
+mean(cases_old$bmi)  
+
+
+plot1 = ggplot(data = cases_old, aes(sample = log(preop_gluc))) +
+  geom_qq() +
+  geom_qq_line()
+
+plot2 = ggplot(data = cases_old, aes(x = log(preop_gluc))) +
+  geom_histogram()
+
+plot1/plot2
+
+plot2
+
+
+#Hent data for arterietryk til case 241
+
+data_art <- VitalDBR::load_case(tname = 'SNUADC/ART', caseid = 241)
+
+#Beregn hvor mange timers data der er
+data_art$Time[11450248]/3600
+
+#Sæt timeframe til mellem 500 og 505
+#Plot tiden mellem timeframe værdi 1 og 2 til tiden og plot tid på x mod arterietryk på y
+#lwd = linewidth     ylim = y limits
+timeFrame = c(500,501)
+plot1 = ggplot(data_art %>% dplyr::filter(Time > timeFrame[1] & Time < timeFrame[2]), aes(x = Time, y = SNUADC.ART)) +
+  geom_line(lwd = 0.05) +
+  geom_line(aes(x = Time, y = ART_filt, color = "red"))+
+  ylim(40,120)
+
+plot1
+
+#Til at filtrere signalet for støj - gsignal er den rigtige
+library(signal)
+library(gsignal)
+
+filt_coef = gsignal::butter(1,25/250,type = "low")
+  data_art = data_art %>% 
+    mutate(ART_filt = gsignal::filtfilt(filt_coef, SNUADC.ART))
+
+
+getwd()
+
+# Open a PDF file for output
+pdf("my_plot.pdf")
+
+print(plot1)
+
+dev.off()
+
+
+
+remotes::install_github("https://github.com/JohannesNE/waveformtools")
+
+data_ecg = VitalDBR::load_case(tname = 'SNUADC/ECG_II', caseid = 268)
+
+data_art = VitalDBR::load_case(tname = 'SNUADC/ART', caseid = 268)
+
+data_ane = VitalDBR::load_case(tname = 'Orchestra/PPF20_VOL', caseid = 268)
+
+install.packages("rsleep")
+closeAllConnections()
+
+library(rsleep)
+
+library(ggplot2)
+
+# detekter r peaks i datasættet data_ecg i tidsrummet 30000 til 31000
+sRate <- 500
+
+ecg <- data.frame(Volts = data_ecg$SNUADC.ECG_II[37500:39000],
+                  Seconds = data_ecg$Time[37500:39000]-data_ecg$Time[37500])
+rpeaks <- detect_rpeaks(ecg$Volts, sRate)
+
+ggplot(ecg,
+       aes(x = Seconds,
+           y = Volts)) +
+  geom_line() + theme_bw() +
+  geom_vline(data.frame(p = rpeaks),
+             mapping = aes(xintercept = p),
+             linetype="dashed",color = "red")
+
+rpeakstid = rpeaks*500+37500 
+rpeakstid
+
+rpeakstid2 = rpeakstid-745
+
+#Definér dataframe og plot derefter tilsvarende data mellem værdierne
+
+plotart = data.frame(Time = data_art$Time[rpeakstid2[2]:rpeakstid2[3]], Tryk = data_art$SNUADC.ART[rpeakstid2[2]:rpeakstid2[3]])
+
+ggplot(plotart, aes(x=Time, y=Tryk)) +
+  geom_line()
+
+library(gsignal)
+gsignal(data_art, )
+
+plotart <- data.frame(
+  Time = data_art$Time[rpeakstid2[1]:rpeakstid2[2]],
+  Tryk = data_art$SNUADC.ART[rpeakstid2[1]:rpeakstid2[2]]
+)
+
+#################################################################
+
+#Find tidspunkt for start af induktion ved at finde tiden til første værdi over 0
+ 
+ggplot(plotart, aes(x = Time, y = Tryk)) +
+  geom_line()
+
+anes = data_ane$Orchestra.PPF20_VOL > 0 OR 
+
+data_ane$Time[90]
+
+diff_anes = diff(anes)
+
+start_ane = data_ane$Time[which(diff_anes != 0)]
+
+start_optag = start_ane - 60
+slut_optag = start_ane + 600
+
+
+#Next up hent alt relevant data for inluderede cases til R
+
+
+#Læs excel fil til Rstudio
+
+library(readxl)
+
+file_path <- "find filepath til excel filen"
+
+"navn på konstant man vil definere" <- read_xlsx(file_path)
+
+data_ane = VitalDBR::load_case(tname = 'Orchestra/PPF20_VOL', caseid = ink)
+
+#Next up hent alt relevant data for inluderede cases til R
+
+
+
+
+
+
+
+
+
+
+
 
