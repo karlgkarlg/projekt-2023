@@ -108,3 +108,47 @@ ggplot(art_interval) +
             aes(x = Time - (rpeaks[81] + start_optag), y = SNUADC.ART))+
   geom_line(data = subset(art_interval, Time >= (rpeaks[91] + start_optag) & Time <= (rpeaks[100] + vindue + start_optag)), 
             aes(x = Time - (rpeaks[91] + start_optag), y = SNUADC.ART))
+
+
+
+#####################################
+
+plot_list <- list()
+  
+  
+  
+for(i in 1:841)
+    {
+    plot_art = ggplot(art_interval) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[1+i] + start_optag) & Time <= (rpeaks[1+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[1+i] + start_optag), y = art_filter)) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[2+i] + start_optag) & Time <= (rpeaks[2+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[2+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[3+i] + start_optag) & Time <= (rpeaks[3+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[3+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[4+i] + start_optag) & Time <= (rpeaks[4+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[4+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[5+i] + start_optag) & Time <= (rpeaks[5+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[5+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[6+i] + start_optag) & Time <= (rpeaks[6+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[6+i] + start_optag), y = art_filter)) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[7+i] + start_optag) & Time <= (rpeaks[7+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[7+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[8+i] + start_optag) & Time <= (rpeaks[8+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[8+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[9+i] + start_optag) & Time <= (rpeaks[9+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[9+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[10+i] + start_optag) & Time <= (rpeaks[10+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[10+i] + start_optag), y = art_filter))+
+              ylim(60, 170)
+ylim
+    plot_list[[paste0("plot_", i)]] <- plot
+    
+    filename <- paste0(caseid, "_", i, ".png")
+    ggsave(filename, plot_art, width = 8, height = 6, units = "in")
+}
+
+  setwd("path/to/your/directory")
+  png_files <- list.files(pattern = "*.png")
+  images <- lapply(png_files, image_read)
+  output_gif <- image_animate(images, delay = 100)
