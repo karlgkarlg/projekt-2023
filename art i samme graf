@@ -19,14 +19,14 @@ slut_optag = start_ane + 600
 
 
 udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
-art_interval = data_art[udvalg, ]
+art_interval = data_art[udvalg_art, ]
 
 ggplot(art_interval, aes(x=Time, y=SNUADC.ART))+
   geom_line()
 
 
 udvalg_ecg = which(data_ecg$Time >start_optag & data_ecg$Time <slut_optag)
-ecg_interval = data_ecg[udvalg, ]
+ecg_interval = data_ecg[udvalg_ecg, ]
 
 ###########################################################################################
 filt_coef = gsignal::butter(1,25/250,type = "low")
