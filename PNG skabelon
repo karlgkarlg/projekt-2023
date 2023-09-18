@@ -1,5 +1,6 @@
 setwd("xxxxx")
 load("x.RData")
+caseid = x
 
 library(tidyverse)
 library(rsleep)
