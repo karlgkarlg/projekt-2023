@@ -1,12 +1,12 @@
-setwd("xxxxx")
-load("x.RData")
-caseid = x
-
 library(tidyverse)
 library(rsleep)
 library(waveformtools)
 library(gsignal)
 library(signal)
+
+setwd("xxxxx")
+load("x.RData")
+caseid = x
 
 anes = data_TIVA$Orchestra.PPF20_VOL > 0
 
