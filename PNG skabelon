@@ -1,0 +1,82 @@
+setwd("xxxxx")
+load("268.RData")
+
+library(tidyverse)
+library(patchwork)
+library(devtools)
+library(usethis)
+library(VitalDBR)
+library(rsleep)
+library(waveformtools)
+library(gsignal)
+library(signal)
+
+anes = data_TIVA$Orchestra.PPF20_VOL > 0
+
+diff_TIVA = diff(anes)
+
+start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
+
+start_ane_sek = data_TIVA$Time[start_ane]
+
+start_optag = start_ane_sek - 60
+slut_optag = start_ane + 600
+
+
+udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
+art_interval = data_art[udvalg_art, ]
+
+filt_coef = gsignal::butter(1,25/250,type = "low")
+art_interval = art_interval %>% 
+  mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+
+
+udvalg_ecg = which(data_ecg$Time >start_optag & data_ecg$Time <slut_optag)
+ecg_interval = data_ecg[udvalg_ecg, ]
+
+
+filt_coef = gsignal::butter(1,25/250,type = "low")
+ecg_interval = ecg_interval %>% 
+  mutate(ecg_interval = gsignal::filtfilt(filt_coef, ecg_interval$SNUADC.ECG_II))
+
+vindue = 0.8
+
+sRate <- 500
+
+ecg <- data.frame(Volts = ecg_interval$SNUADC.ECG_II,
+                  Seconds = ecg_interval$Time)
+rpeaks <- detect_rpeaks(ecg$Volts, sRate)
+
+plot_list <- list()
+
+for (i in 1:x) 
+  {
+  plot_art = ggplot(art_interval) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[1+i] + start_optag) & Time <= (rpeaks[1+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[1+i] + start_optag), y = art_filter)) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[2+i] + start_optag) & Time <= (rpeaks[2+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[2+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[3+i] + start_optag) & Time <= (rpeaks[3+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[3+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[4+i] + start_optag) & Time <= (rpeaks[4+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[4+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[5+i] + start_optag) & Time <= (rpeaks[5+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[5+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[6+i] + start_optag) & Time <= (rpeaks[6+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[6+i] + start_optag), y = art_filter)) +
+    geom_line(data = subset(art_interval, Time >= (rpeaks[7+i] + start_optag) & Time <= (rpeaks[7+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[7+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[8+i] + start_optag) & Time <= (rpeaks[8+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[8+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[9+i] + start_optag) & Time <= (rpeaks[9+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[9+i] + start_optag), y = art_filter))+
+    geom_line(data = subset(art_interval, Time >= (rpeaks[10+i] + start_optag) & Time <= (rpeaks[10+i] + vindue + start_optag)), 
+              aes(x = Time - (rpeaks[10+i] + start_optag), y = art_filter))+
+    ylim(40, 170) + 
+    labs(x = "Seconds", y = "MmHg")
+
+  plot_list[[paste0("plot_", i)]] <- plot
+  
+  filename <- paste0("caseid", "_", i, ".png")
+  ggsave(filename, plot_art, width = 8, height = 6, units = "in", dpi = 150)
+}
