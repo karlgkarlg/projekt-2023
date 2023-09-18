@@ -8,17 +8,31 @@ setwd("xxxxx")
 load("x.RData")
 caseid = x
 
+#Hvis der er givet propofol, så brug koden herunder
+#####################################################
+
 anes = data_TIVA$Orchestra.PPF20_VOL > 0
-
 diff_TIVA = diff(anes)
-
 start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
-
 start_ane_sek = data_TIVA$Time[start_ane]
 
+######################################################
+
+#Hvis der er givet MAC-anæstesi, brug koden nedenfor
+######################################################
+
+anes = data_volatile$Primus.MAC > 0
+diff_volatile = diff(anes)
+start_ane = data_volatile$Time[which(diff_volatile !=0)]
+start_ane <- start_ane[1] #Kun hvis det nødvendigt
+start_ane_sek = data_volatile$Time[start_ane]
+
+######################################################
+
+#Resten er det samme
+######################################################
 start_optag = start_ane_sek - 60
 slut_optag = start_ane + 600
-
 
 udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
 art_interval = data_art[udvalg_art, ]
