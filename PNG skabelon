@@ -17,8 +17,8 @@ diff_TIVA = diff(anes)
 start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
 #start_ane_sek = data_TIVA$Time[start_ane] #Er denne kode nødvendig??
 
-start_optag = start_ane_sek - 60
-slut_optag = start_ane_sek + 600
+start_optag = start_ane - 60
+slut_optag = start_ane + 600
 
 ######################################################
 
