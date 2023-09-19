@@ -66,7 +66,7 @@ rpeaks <- detect_rpeaks(ecg$Volts, sRate)
 
 plot_list <- list()
 
-for (i in seq 1,x#skal være Rpeaks, by = 2)) 
+for (i in seq(1,x#skal være Rpeaks, by = 2)) 
   {
   plot_art = ggplot(art_interval) +
     geom_line(data = subset(art_interval, Time >= (rpeaks[1+i] + start_optag) & Time <= (rpeaks[1+i] + vindue + start_optag)), 
