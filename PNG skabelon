@@ -94,6 +94,6 @@ for (i in seq(1,x#skal være Rpeaks, by = 2))
 
   plot_list[[paste0("plot_", i)]] <- plot
   
-  filename <- paste0("caseid", "_", i, ".png")
+  filename <- paste0(caseid, "_", i, ".png")
   ggsave(filename, plot_art, width = 8, height = 6, units = "in", dpi = 150)
 }
