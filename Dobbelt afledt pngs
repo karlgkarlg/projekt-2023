@@ -1,0 +1,135 @@
+library(tidyverse)
+library(rsleep)
+library(waveformtools)
+library(gsignal)
+library(signal)
+library(patchwork)
+library(gridExtra)
+library(cowplot)
+
+rm(list = ls())
+
+setwd("C:/Users/jenss/OneDrive/Dokumenter/Data cases")
+caseid = 241
+load(paste0(as.character(caseid), ".RData"))
+
+
+#setwd("C:/Users/jenss/OneDrive/Skrivebord/pngs til webm")
+#dir.create(paste("caseid", caseid))
+
+setwd(paste0("C:/Users/jenss/OneDrive/Skrivebord/dif pngs/", as.character(caseid)))
+
+#Hvis der er givet propofol, så brug koden herunder
+#####################################################
+
+anes = data_TIVA$Orchestra.PPF20_VOL > 0
+diff_TIVA = diff(anes)
+
+start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
+#start_ane_sek = data_TIVA$Time[start_ane] #Er denne kode nødvendig??
+
+######################################################
+
+#Hvis der er givet MAC-anæstesi, brug koden nedenfor
+######################################################
+
+anes = data_volatile$Primus.MAC > 0
+diff_volatile = diff(anes)
+
+start_ane = data_volatile$Time[which(diff_volatile !=0)]
+start_ane <- start_ane[1] #Kun hvis det nødvendigt
+#start_ane_sek = data_volatile$Time[start_ane] #Er denne kode nødvendig??
+
+######################################################
+
+#Resten er det samme
+######################################################
+
+start_optag = start_ane - 60
+slut_optag = start_ane + 600
+
+udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
+art_interval = data_art[udvalg_art, ]
+
+filt_coef = gsignal::butter(1,10/250,type = "low")
+art_interval = art_interval %>% 
+  mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+
+
+
+
+#udvalg_ecg = which(data_ecg$Time >start_optag & data_ecg$Time <slut_optag)
+#ecg_interval = data_ecg[udvalg_ecg, ]
+
+#filt_coef = gsignal::butter(1,15/250,type = "low")
+#ecg_interval = ecg_interval %>% 
+  #mutate(ecg_interval = gsignal::filtfilt(filt_coef, ecg_interval$SNUADC.ECG_II))
+sRate <- 500
+
+
+ecg <- data.frame(Volts = art_interval$SNUADC.ART,
+                  Seconds = art_interval$Time)
+rpeaks <- detect_rpeaks(refractory = 350, ecg$Volts, sRate)
+
+
+vindue = rpeaks[40]-rpeaks[39]
+
+#y_max = 2.5*median(art_interval$art_filter)
+
+#y_min = 0.5*median(art_interval$art_filter)
+
+
+second_derived_values <- diff(art_interval$art_filter, differences = 2)
+
+second_derived_data <- data.frame(
+  Time = art_interval$Time,  # Time column from art_interval
+  SNUADC.ART = art_interval$art_filter,  # SNUADC.ART column from art_interval
+  Second_Derivative = c(NA, NA, second_derived_values)  # Padding with NAs for the first two entries
+)
+
+second_derived_data[is.na(second_derived_data)] <- 0
+
+filt_coef = gsignal::butter(1,10/250,type = "low")
+second_derived_data = second_derived_data %>% 
+  mutate(derive_filter = gsignal::filtfilt(filt_coef, Second_Derivative))
+
+y_max = as.numeric(quantile(second_derived_data$derive_filter, 0.995))
+y_min = as.numeric(quantile(second_derived_data$derive_filter, 0.005))
+
+
+
+plot_list <- list()
+
+for (i in seq(1, length(rpeaks)-10, by = 2)) 
+{   
+      plot_art = ggplot(second_derived_data)+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[1+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[1+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[1+i] + start_optag), y = derive_filter)) +
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[2+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[2+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[2+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[3+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[3+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[3+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[4+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[4+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[4+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[5+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[5+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[5+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[6+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[6+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[6+i] + start_optag), y = derive_filter)) +
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[7+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[7+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[7+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[8+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[8+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[8+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[9+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[9+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[9+i] + start_optag), y = derive_filter))+
+    geom_line(data = subset(second_derived_data, Time >= (rpeaks[10+i] + start_optag - 0.2*vindue) & Time <= (rpeaks[10+i] + 0.85*vindue + start_optag)), 
+              aes(x = Time - (rpeaks[10+i] + start_optag), y = derive_filter))+
+        ylim(y_min,y_max) +
+        labs(x = "Seconds", y = "mmHg/ms^2")+
+    annotate("text", x = Inf, y = Inf, label = paste("Time:", sprintf("%.2f", rpeaks[1 + i]-60)), hjust = 1, vjust = 1)
+  
+  plot_list[[paste0("plot_", i)]] <- plot
+  
+  filename <- paste0(caseid, "_", "dif", "_", i, ".png")
+  ggsave(filename, plot_art, width = 8, height = 6, units = "in", dpi = 150)
+}
+
