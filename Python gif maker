@@ -1,0 +1,48 @@
+import glob
+from PIL import Image
+import os
+import tqdm
+import imageio
+import moviepy.editor as mp
+def sort_func(img):
+    val = img.split(".")[0].split("_dif_")
+    num = float(val[0])
+    dis = float(val[1])
+    val = num + (dis / 1000.0)
+    return val
+
+def make_gif(img_folder, gif_out_name="test", fps=16, resolution = (1200, 900)):
+    
+    #print(img_folder)
+    img_folder = os.path.join(os.getcwd(), img_folder)
+    
+    print(img_folder)
+    imgs = os.listdir(img_folder)
+    imgs = [img for img in imgs if img.endswith(".png")]
+    imgs = sorted(imgs, key=sort_func)
+
+
+    frames = []
+    output_file = gif_out_name + ".gif"
+    for img in tqdm.tqdm(imgs):
+        img_path = os.path.join(img_folder, img)
+        frame = imageio.imread(img_path)
+        #frame = Image.open(img_path)
+        #frame = frame.resize(resolution)
+        frames.append(frame)
+
+    video_clip = mp.ImageSequenceClip(frames, fps=fps)
+    video_clip.write_gif(output_file, fps=fps, opt='OptimizePlus', fuzz=10)
+
+
+if __name__ == "__main__":
+    webm_out_name = "test"
+    img_folder = "gif_pngs"
+    fps = 16
+  #  make_gif(img_folder=img_folder, webm_out_name=webm_out_name, fps=fps)
+
+
+    list_of_img_folder_names = [file for file in os.listdir(os.getcwd())
+                                if "." not in file]
+    for img_folder in list_of_img_folder_names:
+        make_gif(img_folder=img_folder, gif_out_name=img_folder)
