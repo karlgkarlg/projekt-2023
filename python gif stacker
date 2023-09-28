@@ -1,0 +1,17 @@
+import imageio
+import numpy as np
+
+
+# Load the GIFs with memtest=False
+gif1 = imageio.mimread('C:/Users/jenss/OneDrive/Skrivebord/pngs til webm/gif med tid/caseid 268.gif', memtest=False)
+gif2 = imageio.mimread('C:/Users/jenss/OneDrive/Skrivebord/pngs til webm/difgif med tid/caseid 268.gif', memtest=False)
+
+# Calculate the frame duration for 16 fps
+frame_duration = 1.0 / 16.0  # 16 fps
+
+stacked_gif = []
+for frame1, frame2 in zip(gif1, gif2):
+    stacked_frame = np.vstack((frame1, frame2))
+    stacked_gif.append(stacked_frame)
+
+# Save the stacked GIF with 16 fps frame duration
