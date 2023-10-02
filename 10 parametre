@@ -1,0 +1,203 @@
+library(tidyverse)
+library(rsleep)
+library(waveformtools)
+library(gsignal)
+library(signal)
+library(patchwork)
+library(gridExtra)
+library(cowplot)
+
+rm(list = ls())
+
+setwd("C:/Users/jenss/OneDrive/Dokumenter/Data cases")
+caseid = 5975
+load(paste0(as.character(caseid), ".RData"))
+
+
+
+#Hvis der er givet propofol, så brug koden herunder
+#####################################################
+
+anes = data_TIVA$Orchestra.PPF20_VOL > 0
+diff_TIVA = diff(anes)
+
+start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
+#start_ane_sek = data_TIVA$Time[start_ane] #Er denne kode nødvendig??
+
+######################################################
+
+#Hvis der er givet MAC-anæstesi, brug koden nedenfor
+######################################################
+
+anes = data_volatile$Primus.MAC > 0
+diff_volatile = diff(anes)
+
+start_ane = data_volatile$Time[which(diff_volatile !=0)]
+start_ane <- start_ane[1] #Kun hvis det nødvendigt
+#start_ane_sek = data_volatile$Time[start_ane] #Er denne kode nødvendig??
+
+######################################################
+
+#Resten er det samme
+######################################################
+
+start_optag = start_ane - 60
+slut_optag = start_ane + 600
+
+udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
+art_interval = data_art[udvalg_art, ]
+
+filt_coef = gsignal::butter(1,10/250,type = "low")
+art_interval = art_interval %>% 
+  mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+
+
+
+
+#udvalg_ecg = which(data_ecg$Time >start_optag & data_ecg$Time <slut_optag)
+#ecg_interval = data_ecg[udvalg_ecg, ]
+
+#filt_coef = gsignal::butter(1,15/250,type = "low")
+#ecg_interval = ecg_interval %>% 
+#mutate(ecg_interval = gsignal::filtfilt(filt_coef, ecg_interval$SNUADC.ECG_II))
+sRate <- 500
+
+
+ecg <- data.frame(Volts = art_interval$SNUADC.ART,
+                  Seconds = art_interval$Time)
+rpeaks <- detect_rpeaks(refractory = 350, ecg$Volts, sRate)
+
+
+vindue = rpeaks[40]-rpeaks[39]
+
+
+rpeaks2 = round(rpeaks*500)
+
+
+#Udregn middeltryk
+#############################################
+
+middeltryk = c()
+
+for(i in 1:(length(rpeaks2)-1))
+{
+  
+  
+  middeltryk[i] = mean(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
+}
+
+
+
+plot1 = plot(rpeaks[1:(length(rpeaks)-1)], middeltryk)
+
+plot(rpeaks[1:(length(rpeaks)-2)], diff(middeltryk))
+
+
+middeltryk[(diff(middeltryk) > 5 | (diff(middeltryk) < -5))] = NA
+
+
+plot(middeltryk)
+
+
+
+
+#Udregn pulstryk
+###################################################################
+max = c()
+min = c()
+
+for(i in 1:(length(rpeaks2)-1))
+{
+  
+  
+  max[i] = max(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
+  min[i] = min(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
+  
+  }
+pulstryk = max-min
+
+plot(diff(pulstryk))
+
+pulstryk[(diff(pulstryk) > 10 | (diff(pulstryk) < -10))] = NA
+plot(pulstryk)
+
+print(pulstryk)
+
+
+
+#Maksimal hældning
+################################################################
+
+max_hældning = c()
+
+for(i in 1:(length(rpeaks2)-1)) {
+  
+max_hældning[i] = max(diff(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]]))
+
+  
+}
+  
+  plot(diff(max_hældning))
+
+  max_hældning[(diff(max_hældning) > 0.2 | (diff(max_hældning) < -0.2))] = NA
+
+  
+  plot(max_hældning)
+
+# Hjertefrekvens
+###################################################
+
+  frekvens = c()
+  
+  for(i in 1:(length(rpeaks2)-1)) {
+    
+    frekvens[i] = rpeaks[i+1]*60-rpeaks[i]*60
+    
+    
+  }
+  
+  plot(diff(frekvens))
+  
+  frekvens[(diff(frekvens) > 10 | (diff(frekvens) < -10))] = NA
+  
+  plot(frekvens)
+frekvens  
+
+#Dicrotic notch peak acceleration
+########################################################
+second_derived_values <- diff(art_interval$art_filter, differences = 2)
+second_derived_values[is.na(second_derived_values)] <- 0
+
+
+
+dicmax = c()
+
+for(i in 1:length(rpeaks)) {
+dicmax[i] = max(second_derived_values[(rpeaks[i]+0.1):(rpeaks[i]+0.4)])
+
+}
+
+plot(dicmax)
+
+print(dicmax)
+
+#Accelerationspeaks?
+########################################################
+
+#Længden af systole/diastole?
+########################################################
+
+#Middeltryk før induktion
+########################################################
+
+mean(art_interval$art_filter[art_interval$art_filter[1]:art_interval$art_filter[start_ane*500]])
+
+
+#
+########################################################
+
+
+
+
+
+
