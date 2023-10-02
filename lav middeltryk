@@ -1,0 +1,27 @@
+rpeaks2 = round(rpeaks*500)
+
+
+
+middeltryk = c()
+
+for(i in 1:(length(rpeaks2)-1))
+  {
+    
+
+  middeltryk[i] = mean(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
+  }
+
+plot(art_interval$art_filter[rpeaks2[1]:rpeaks2[755]])
+
+art_interval$art_filter[540122]
+
+plot1 = plot(rpeaks[1:(length(rpeaks)-1)], middeltryk)
+
+plot(rpeaks[1:(length(rpeaks)-2)], diff(middeltryk))
+
+
+middeltryk[(diff(middeltryk) > 5 | (diff(middeltryk) < -5))] = NA
+
+
+plot(middeltryk)
+
