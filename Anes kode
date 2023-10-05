@@ -1,0 +1,14 @@
+if (exists("data_TIVA") && "Orchestra.PPF20_VOL" %in% names(data_TIVA)) {
+  # Code for data_TIVA
+  anes = data_TIVA$Orchestra.PPF20_VOL > 0
+  diff_TIVA = diff(anes)
+  start_ane = data_TIVA$Time[which(diff_TIVA != 0)]
+} else if (exists("data_volatile")) {
+  # Code for data_volatile
+  anes = data_volatile$Primus.MAC > 0
+  diff_volatile = diff(anes)
+  start_ane = data_volatile$Time[which(diff_volatile != 0)]
+} else {
+  # Code to handle the case where neither data_TIVA nor data_volatile exists
+  cat("Neither data_TIVA nor data_volatile exists, or data_TIVA$Orchestra.PPF20_VOL does not exist.\n")
+}
