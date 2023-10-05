@@ -258,6 +258,10 @@ plot(max_accel)
 
 mean_max_accel = mean(max_accel)
 
+start_max_accel =mean(max_accel[1:5])
+slut_max_accel = mean(tail(max_accel, 5))
+
+accel_delta = start_max_accel-slut_max_accel
 
 #Længden af systole/diastole?
 ########################################################
@@ -302,7 +306,7 @@ x2 = mean_pp
 x3 = mean_max_hældning
 x4 = mean_frekvens
 x5 = mean_dic  #fungerer ikke#
-x6 = mean_max_accel
+x6 = accel_delta
 x7 = pre_ane_map
 
 
