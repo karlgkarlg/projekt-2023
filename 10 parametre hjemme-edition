@@ -12,7 +12,7 @@ library(cowplot)
 rm(list = ls())
 
 setwd("C:/Users/Jens/Documents/r case data")
-caseid = 250
+caseid = 268
 load(paste0(as.character(caseid), ".RData"))
 
 
@@ -24,7 +24,6 @@ anes = data_TIVA$Orchestra.PPF20_VOL > 0
 diff_TIVA = diff(anes)
 
 start_ane = data_TIVA$Time[which(diff_TIVA !=0)]
-#start_ane_sek = data_TIVA$Time[start_ane] #Er denne kode nødvendig??
 
 ######################################################
 
@@ -35,13 +34,12 @@ anes = data_volatile$Primus.MAC > 0
 diff_volatile = diff(anes)
 
 start_ane = data_volatile$Time[which(diff_volatile !=0)]
-start_ane <- start_ane[1] #Kun hvis det nødvendigt
-#start_ane_sek = data_volatile$Time[start_ane] #Er denne kode nødvendig??
+start_ane <- start_ane[1]
 
 ######################################################
 
-#Resten er det samme
-######################################################
+#Definer dataramme
+#####################################################
 
 start_optag = start_ane - 60
 slut_optag = start_ane + 600
@@ -49,31 +47,41 @@ slut_optag = start_ane + 600
 udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
 art_interval = data_art[udvalg_art, ]
 
+#Dataramme for features
+#####################################################
+start_feature = (start_ane - 10)
+slut_feature = start_ane + 60
+
+art_feature_int = which(data_art$Time >start_feature & data_art$Time <slut_feature)
+art_feature = data_art[art_feature_int, ]
+
+
+filt_coef = gsignal::butter(1,10/250,type = "low")
+art_feature = art_feature %>% 
+  mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+
+
+#Filterer data og find hjerteslag
+#####################################################
+
 filt_coef = gsignal::butter(1,10/250,type = "low")
 art_interval = art_interval %>% 
   mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
 
 
 
-
-#udvalg_ecg = which(data_ecg$Time >start_optag & data_ecg$Time <slut_optag)
-#ecg_interval = data_ecg[udvalg_ecg, ]
-
-#filt_coef = gsignal::butter(1,15/250,type = "low")
-#ecg_interval = ecg_interval %>% 
-#mutate(ecg_interval = gsignal::filtfilt(filt_coef, ecg_interval$SNUADC.ECG_II))
 sRate <- 500
 
 
-ecg <- data.frame(Volts = art_interval$SNUADC.ART,
-                  Seconds = art_interval$Time)
+ecg <- data.frame(Volts = art_feature$SNUADC.ART,
+                  Seconds = art_feature$Time)
 rpeaks <- detect_rpeaks(refractory = 350, ecg$Volts, sRate)
 
 
 vindue = rpeaks[40]-rpeaks[39]
 
 
-rpeaks2 = round(rpeaks+start_optag)
+rpeaks2 = rpeaks+start_ane-20
 
 
 #Udregn middeltryk
@@ -101,6 +109,11 @@ middeltryk[(diff(middeltryk) > 5 | (diff(middeltryk) < -5))] = NA
 plot(middeltryk)
 
 
+mean_map = mean(art_feature$art_filter[art_feature$Time >= rpeaks2[1] & art_feature$Time <= rpeaks2[length(rpeaks2)]])
+
+rpeaks2
+
+
 
 
 #Udregn pulstryk
@@ -110,21 +123,28 @@ min = c()
 
 for(i in 1:(length(rpeaks2)-1))
 {
-  
-  
-  max[i] = max(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
-  min[i] = min(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]])
+
+  max[i] = max(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]])
+  min[i] = min(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]])
   
 }
+
 pulstryk = max-min
 
-plot(diff(pulstryk))
+range_pp =quantile(pulstryk, c(0.15, 0.5, 0.85), na.rm = T)
+range_low_pp = range_pp[2] - 3.5*(range_pp[2] - range_pp[1])
+range_high_pp = range_pp[2] + 3.5*(range_pp[3] - range_pp[2])
+pulstryk[pulstryk > range_high_pp | pulstryk < range_low_pp] = NA
 
-pulstryk[(diff(pulstryk) > 10 | (diff(pulstryk) < -10))] = NA
+pulstryk = pulstryk[is.finite(pulstryk)]
+
+mean_pp = mean(pulstryk)
+
 plot(pulstryk)
 
-print(pulstryk)
 
+
+print(pulstryk)
 
 
 #Maksimal hældning
@@ -134,17 +154,25 @@ max_hældning = c()
 
 for(i in 1:(length(rpeaks2)-1)) {
   
-  max_hældning[i] = max(diff(art_interval$art_filter[rpeaks2[i]:rpeaks2[i+1]]))
-  
-  
+  max_hældning[i] = max(diff(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]]), na.rm = TRUE)
 }
 
-plot(diff(max_hældning))
 
-max_hældning[(diff(max_hældning) > 0.2 | (diff(max_hældning) < -0.2))] = NA
+range_hældning =quantile(max_hældning, c(0.25, 0.5, 0.75), na.rm = T)
+range_low_hæld = range_hældning[2] - 2*(range_hældning[2] - range_hældning[1])
+range_high_hæld = range_hældning[2] + 2*(range_hældning[3] - range_hældning[2])
+max_hældning[max_hældning > range_high_hæld | max_hældning < range_low_hæld] = NA
+
+max_hældning = max_hældning[is.finite(max_hældning)]
 
 
 plot(max_hældning)
+
+
+mean_max_hældning = mean(max_hældning)
+
+
+max_hældning
 
 # Hjertefrekvens
 ###################################################
@@ -153,17 +181,22 @@ frekvens = c()
 
 for(i in 1:(length(rpeaks2)-1)) {
   
-  frekvens[i] = rpeaks[i+1]*60-rpeaks[i]*60
+  frekvens[i] = 60/(rpeaks[i+1]-rpeaks[i])
   
   
 }
 
-plot(diff(frekvens))
+range_frekvens =quantile(frekvens, c(0.25, 0.5, 0.75), na.rm = T)
+range_low_fr = range_frekvens[2] - 3.5*(range_frekvens[2] - range_frekvens[1])
+range_high_fr = range_frekvens[2] + 3.5*(range_frekvens[3] - range_frekvens[2])
+frekvens[frekvens > range_high_fr | frekvens < range_low_fr] = NA
 
-frekvens[(diff(frekvens) > 10 | (diff(frekvens) < -10))] = NA
+frekvens = frekvens[is.finite(frekvens)]
 
+frekvens
+                    
 plot(frekvens)
-frekvens  
+mean_frekvens = mean(frekvens) 
 
 #Dicrotic notch peak acceleration
 ########################################################
@@ -172,28 +205,36 @@ second_derived_values <- diff(art_interval$art_filter, differences = 2)
 second_derived_data <- data.frame(
   Time = art_interval$Time,  # Time column from art_interval
   SNUADC.ART = art_interval$art_filter,  # SNUADC.ART column from art_interval
-  Second_Derivative = c(NA, NA, second_derived_values)  # Padding with NAs for the first two entries
+  Second_Derivative = c(0, 0, second_derived_values)  # Padding with NAs for the first two entries
 )
 
 second_derived_data[is.na(second_derived_data)] <- 0
 
-
+dicmax_tid = c()
 dicmax = c()
-
-for(i in 1:length(rpeaks2)) {
-  dicmax[i] = max(second_derived_data$Second_Derivative[second_derived_data$Time >= (rpeaks2[i] + 0.1) & second_derived_data$Time <= (rpeaks2[i] + 0.4)], na.rm = TRUE)
-
-
+upper_range = min(0.4, 60/range_frekvens[2]-0.1)
+for(i in 1:(length(rpeaks2)-1)) {
+  dicmax[i] = max(second_derived_data$Second_Derivative[second_derived_data$Time >= (rpeaks2[i] + 0.1) & second_derived_data$Time <= (rpeaks2[i] + upper_range)], na.rm = TRUE)
+  dicmax_tid[i] = which.max(second_derived_data$Second_Derivative[second_derived_data$Time >= (rpeaks2[i] + 0.1) & second_derived_data$Time <= (rpeaks2[i] + upper_range)])
+  
   
 }
 
-dicmax[(diff(dicmax) > 0.2 | (diff(dicmax) < -0.2))] = NA
 
+range_dicmax =quantile(dicmax, c(0.25, 0.5, 0.75), na.rm = T)
+range_low_dic = range_dicmax[2] - 3.5*(range_dicmax[2] - range_dicmax[1])
+range_high_dic = range_dicmax[2] + 3.5*(range_dicmax[3] - range_dicmax[2])
+dicmax[dicmax > range_high_dic | dicmax < range_low_dic] = NA
+
+dicmax = dicmax[is.finite(dicmax)]
+
+mean_dic = mean(dicmax)
 
 plot(dicmax)
+plot(dicmax_tid)
 
 print(dicmax)
-
+hist(dicmax_tid)
 
 
 #Accelerationspeaks?
@@ -205,12 +246,17 @@ for(i in 1:(length(rpeaks2)-1)){
   max_accel[i] = max(second_derived_data$Second_Derivative[second_derived_data$Time >= rpeaks2[i] & second_derived_data$Time <= rpeaks2[i+1]], na.rm = TRUE)
 }
 
-max_accel[(diff(max_accel) > 0.2 | (diff(max_accel) < -0.2))] = NA
 
+range_max_accel =quantile(max_accel, c(0.25, 0.5, 0.75), na.rm = T)
+range_low_accel = range_max_accel[2] - 3.5*(range_max_accel[2] - range_max_accel[1])
+range_high_accel = range_max_accel[2] + 3.5*(range_max_accel[3] - range_max_accel[2])
+max_accel[max_accel > range_high_accel | max_accel < range_low_accel] = NA
 
+max_accel = max_accel[is.finite(max_accel)]
 
 plot(max_accel)
 
+mean_max_accel = mean(max_accel)
 
 
 #Længden af systole/diastole?
@@ -226,7 +272,7 @@ plot(diff(art_interval$art_filter[art_interval$Time >= (rpeaks2[1]-0.2*vindue) &
 #Middeltryk før induktion
 ########################################################
 
-mean(art_interval$art_filter[art_interval$art_filter[1]:art_interval$art_filter[start_ane]*500])
+pre_ane_map = mean(art_interval$art_filter[art_interval$art_filter[1]:art_interval$art_filter[start_ane]*500])
 
 
 #Skulder på trykkurven
@@ -236,6 +282,40 @@ mean(art_interval$art_filter[art_interval$art_filter[1]:art_interval$art_filter[
 
 #
 ########################################################
+
+antagelse til statistisk model - residualer (afstande) til "plan" skal være normalfordelte
+
+"""
+###############################################################
+
+Reparer x5 så den detekterer rigtigt på dicmax
+
+Lav om til udvikling - f.eks. forskel på gennemsnit af første 5 og sidste 5 målinger i vinduet
+
+Automatisér dannelse af dataframe for hver case
+
+Skrive skrive
+
+
+x1 = mean_map
+x2 = mean_pp
+x3 = mean_max_hældning
+x4 = mean_frekvens
+x5 = mean_dic  #fungerer ikke#
+x6 = mean_max_accel
+x7 = pre_ane_map
+
+
+evt. ændring i start vs slut map, frekvens osv.
+
+
+
+"""
+
+
+
+
+
 
 
 
