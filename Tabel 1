@@ -1,0 +1,29 @@
+library(tidyverse)
+library(patchwork)
+library(devtools)
+library(usethis)
+library(VitalDBR)
+library(rsleep)
+library(waveformtools)
+library(gsignal)
+library(gtsummary)
+
+
+
+cases <- load_VDB("https://api.vitaldb.net/cases")
+cases <- cases %>% 
+  dplyr::select(caseid, age, sex, height, weight, bmi, approach, preop_dm, preop_hb, preop_na, preop_k, preop_alb) %>%  
+  dplyr::filter(caseid %in% c(241, 250, 268, 316, 418, 535, 617, 992, 1341, 1759, 1821, 2130, 2291,
+                3233, 3569, 3702, 3898, 3936, 4290, 4337, 4408, 4602, 4619, 4724, 4750, 4760,
+                5116, 5118, 5221, 5753, 5777, 5853, 5917, 5975, 6080, 6156, 6200, 6237, 6330, 6331))
+
+  
+  
+  Tabel <- cases %>% 
+    select(-caseid) %>% 
+    tbl_summary(by = sex, missing = "no") %>% 
+    add_p() %>% 
+    add_overall() %>%
+    add_n() %>% 
+    bold_labels()
+Tabel
