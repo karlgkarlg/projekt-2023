@@ -1,0 +1,335 @@
+  rm(list = ls())
+  
+  
+cases = c(241, 250, 268, 316, 418, 535, 617, 992, 1341, 1759, 1821, 
+          2130, 2291, 3233, 3569, 3702, 3898, 3936, 4290, 
+          4337, 4408, 4602, 4619, 4724, 4750, 4760, 5116, 5118, 5221, 5753, 
+          5777, 5853, 5917, 5975, 6080, 6156, 6200, 6237, 6330, 6331)
+
+setwd("C:/Users/jenss/OneDrive/Dokumenter/Data cases")
+
+tabel <- data.frame(
+  Caseid = integer(),
+  Target_map = numeric(),
+  Map_delta = numeric(),
+  Pulstryk_delta = numeric(),
+  Max_hældning_delta = numeric(),
+  Frekvens_delta = numeric(),
+  Dic_delta = numeric(),
+  Accel_delta = numeric(),
+  Pre_ane_map = numeric(),
+  stringsAsFactors = FALSE  # Prevent strings from being converted to factors
+)
+
+for(j in 1:(length(cases)))
+{
+
+  rm(data_TIVA, data_volatile, diff_TIVA, diff_volatile)
+  caseid = cases[j]
+  load(paste0(as.character(caseid), ".RData"))
+  
+  if (exists("data_TIVA") && "Orchestra.PPF20_VOL" %in% names(data_TIVA)) {
+    # Code for data_TIVA
+    anes = data_TIVA$Orchestra.PPF20_VOL > 0
+    diff_TIVA = diff(anes)
+    start_ane = data_TIVA$Time[which(diff_TIVA != 0)]
+  } else if (exists("data_volatile")) {
+    # Code for data_volatile
+    anes = data_volatile$Primus.MAC > 0
+    diff_volatile = diff(anes)
+    start_ane = data_volatile$Time[which(diff_volatile != 0)]
+  } else {
+    # Code to handle the case where neither data_TIVA nor data_volatile exists
+    cat("Neither data_TIVA nor data_volatile exists, or data_TIVA$Orchestra.PPF20_VOL does not exist.\n")
+  }
+  
+  start_ane = start_ane[1]
+  
+  start_optag = start_ane - 60
+  slut_optag = start_ane + 600
+  
+  udvalg_art = which(data_art$Time >start_optag & data_art$Time <slut_optag)
+  art_interval = data_art[udvalg_art, ]
+  
+  target_time_start = start_ane + 180
+  target_time_slut = start_ane + 240
+  
+
+  
+  #Dataramme for features
+  #####################################################
+  start_feature = (start_ane - 10)
+  slut_feature = start_ane + 60
+  
+  art_feature_int = which(data_art$Time >start_feature & data_art$Time <slut_feature)
+  art_feature = data_art[art_feature_int, ]
+  
+  
+  filt_coef = gsignal::butter(1,10/250,type = "low")
+  art_feature = art_feature %>% 
+    mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+  
+  
+  #Filterer data og find hjerteslag
+  #####################################################
+  
+  filt_coef = gsignal::butter(1,10/250,type = "low")
+  art_interval = art_interval %>% 
+    mutate(art_filter = gsignal::filtfilt(filt_coef, SNUADC.ART))
+  
+  
+  
+  sRate <- 500
+  
+  
+  ecg <- data.frame(Volts = art_feature$SNUADC.ART,
+                    Seconds = art_feature$Time)
+  rpeaks <- detect_rpeaks(refractory = 350, ecg$Volts, sRate)
+  
+  
+  vindue = rpeaks[40]-rpeaks[39]
+  
+  
+  rpeaks2 = rpeaks+start_ane-20
+  
+  #Find værdier til regression
+  ############################
+  
+  middeltryk = c()
+  max = c()
+  min = c()
+  max_hældning = c()
+  frekvens = c()
+  
+  second_derived_values <- diff(art_interval$art_filter, differences = 2)
+  
+  second_derived_data <- data.frame(
+    Time = art_interval$Time,  # Time column from art_interval
+    SNUADC.ART = art_interval$art_filter,  # SNUADC.ART column from art_interval
+    Second_Derivative = c(0, 0, second_derived_values)  # Padding with NAs for the first two entries
+  )
+  
+  second_derived_data[is.na(second_derived_data)] <- 0
+  
+  dicmax_tid = c()
+  dicmax = c()
+  upper_range = 0.4
+  
+  max_accel = c()
+  
+  target_map= c()
+  
+  for(i in 1:(length(rpeaks2)-1))
+  {
+    middeltryk[i] = mean(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]])
+    
+    max[i] = max(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]])
+    min[i] = min(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]])
+    
+    max_hældning[i] = max(diff(art_feature$art_filter[art_feature$Time >= rpeaks2[i] & art_feature$Time <= rpeaks2[i+1]]), na.rm = TRUE)
+    
+    frekvens[i] = 60/(rpeaks[i+1]-rpeaks[i])
+    
+    dicmax[i] = max(second_derived_data$Second_Derivative[second_derived_data$Time >= (rpeaks2[i] + 0.1) & second_derived_data$Time <= (rpeaks2[i] + upper_range)], na.rm = TRUE)
+    
+    max_accel[i] = max(second_derived_data$Second_Derivative[second_derived_data$Time >= rpeaks2[i] & second_derived_data$Time <= rpeaks2[i+1]], na.rm = TRUE)
+    
+    
+  }
+  
+  target_map = mean(art_interval$art_filter[art_interval$Time >= target_time_start & art_interval$Time <= target_time_slut], na.rm = TRUE)
+  
+  print(target_map)
+  
+  middeltryk = middeltryk[is.finite(middeltryk)]
+  
+  start_map = mean(middeltryk[1:5])
+  slut_map = mean(tail(middeltryk, 5))
+  
+  
+  map_delta = start_map-slut_map
+  
+  #####################
+  
+  pulstryk = max-min
+  
+  range_pp =quantile(pulstryk, c(0.15, 0.5, 0.85), na.rm = T)
+  range_low_pp = range_pp[2] - 3.5*(range_pp[2] - range_pp[1])
+  range_high_pp = range_pp[2] + 3.5*(range_pp[3] - range_pp[2])
+  pulstryk[pulstryk > range_high_pp | pulstryk < range_low_pp] = NA
+  
+  pulstryk = pulstryk[is.finite(pulstryk)]
+  
+  start_pulstryk = mean(pulstryk[1:5])
+  slut_pulstryk = mean(tail(pulstryk, 5))
+  
+  pulstryk_delta = start_pulstryk-slut_pulstryk
+  
+  ###################
+  
+  range_hældning =quantile(max_hældning, c(0.25, 0.5, 0.75), na.rm = T)
+  range_low_hæld = range_hældning[2] - 2*(range_hældning[2] - range_hældning[1])
+  range_high_hæld = range_hældning[2] + 2*(range_hældning[3] - range_hældning[2])
+  max_hældning[max_hældning > range_high_hæld | max_hældning < range_low_hæld] = NA
+  
+  max_hældning = max_hældning[is.finite(max_hældning)]
+  
+  
+  
+  start_mhæld = mean(max_hældning[1:5])
+  slut_mhæld = mean(tail(max_hældning, 5))
+  
+  max_hældning_delta = start_mhæld - slut_mhæld
+  
+  ###############################
+  
+  range_frekvens =quantile(frekvens, c(0.25, 0.5, 0.75), na.rm = T)
+  range_low_fr = range_frekvens[2] - 3.5*(range_frekvens[2] - range_frekvens[1])
+  range_high_fr = range_frekvens[2] + 3.5*(range_frekvens[3] - range_frekvens[2])
+  frekvens[frekvens > range_high_fr | frekvens < range_low_fr] = NA
+  
+  frekvens = frekvens[is.finite(frekvens)]
+  
+  start_frekvens = mean(frekvens[1:5])
+  slut_frekvens = mean(tail(frekvens, 5))
+  
+  frekvens_delta = start_frekvens-slut_frekvens
+  
+  ######################
+  
+  range_dicmax =quantile(dicmax, c(0.25, 0.5, 0.75), na.rm = T)
+  range_low_dic = range_dicmax[2] - 3.5*(range_dicmax[2] - range_dicmax[1])
+  range_high_dic = range_dicmax[2] + 3.5*(range_dicmax[3] - range_dicmax[2])
+  dicmax[dicmax > range_high_dic | dicmax < range_low_dic] = NA
+  
+  dicmax = dicmax[is.finite(dicmax)]
+  
+  start_dic = mean(dicmax[1:5])
+  slut_dic = mean(tail(dicmax, 5))
+  
+  dic_delta = start_dic-slut_dic 
+  
+  #############################
+  
+  range_max_accel =quantile(max_accel, c(0.25, 0.5, 0.75), na.rm = T)
+  range_low_accel = range_max_accel[2] - 3.5*(range_max_accel[2] - range_max_accel[1])
+  range_high_accel = range_max_accel[2] + 3.5*(range_max_accel[3] - range_max_accel[2])
+  max_accel[max_accel > range_high_accel | max_accel < range_low_accel] = NA
+  
+  max_accel = max_accel[is.finite(max_accel)]
+  
+  start_max_accel =mean(max_accel[1:5])
+  slut_max_accel = mean(tail(max_accel, 5))
+  
+  accel_delta = start_max_accel-slut_max_accel
+  
+  ################################
+  
+  pre_ane_map = mean(art_interval$art_filter[art_interval$art_filter[1]:art_interval$art_filter[start_ane]*500])
+  
+  ###############################
+ 
+    # Create a new row for the current case and fill in the data
+    new_row <- data.frame(
+      Caseid = cases[j],
+      Target_map = target_map,
+      Map_delta = map_delta,
+      Pulstryk_delta = pulstryk_delta,
+      Max_hældning_delta = max_hældning_delta,
+      Frekvens_delta = frekvens_delta,
+      Dic_delta = dic_delta,
+      Accel_delta = accel_delta,
+      Pre_ane_map = pre_ane_map
+    )
+    
+    # Add the new row to the data frame
+    tabel <- rbind(tabel, new_row)
+    
+    
+}
+
+
+tabel
+
+linear_model = lm(data = tabel, Target_map ~Pre_ane_map + Map_delta + Pulstryk_delta + Max_hældning_delta + Frekvens_delta + Dic_delta + Accel_delta)
+summary(linear_model)
+
+ggplot(data = tabel, aes(x = Accel_delta, y = Target_map))+
+         geom_point()+
+         geom_smooth(method = 'lm', se = F)
+
+predictions = c()
+actual = c()
+predictions_premap = c()
+
+for(i in 1:length(cases)){
+  linear_model = lm(data = tabel[-i,], Target_map ~Pre_ane_map + Map_delta + Pulstryk_delta + Max_hældning_delta + Frekvens_delta + Dic_delta + Accel_delta)
+  
+  linear_model_premap = lm(data = tabel[-i,], Target_map ~Pre_ane_map)
+  
+  predictions_premap[i] = predict(linear_model_premap, newdata = tabel[i,])
+  
+  predictions[i] <- predict(linear_model, newdata = tabel[i,])
+  actual[i] = tabel$Target_map[i]
+  
+}
+  
+  summary(linear_model_premap)
+plot(predictions, actual)
+
+sd(predictions_premap-actual)
+
+predictions
+actual
+
+predict(linear_model)
+
+plot(tabel$Pre_ane_map, actual)
+
+ggplot(data = tabel, aes(x = seq(linear_model$residuals), y = linear_model$residuals))+
+  geom_point()+
+  geom_hline(yintercept = 0)
+
+ggplot(linear_model, aes(sample = .resid))+
+  stat_qq()+
+  stat_qq_line()
+
+
+library(ggplot2)
+ggplot(data = data.frame(Residuals = linear_model$residuals), aes(x = Residuals)) +
+  geom_density() +
+  labs(title = "Residuals Density Plot")
+
+
+install.packages("nortest")
+
+linear_model
+
+plot(linear_model)
+
+predict()
+  
+3969  
+
+# Use the linear model to make predictions for Target_map
+predictions <- predict(linear_model, newdata = tabel[1,])
+
+# The 'predictions' variable now contains the predicted values for Target_map
+
+
+plot(pulstryk)
+pulstryk
+lm_pulstryk = lm(pulstryk ~ 1)+
+  lm_smooth()
+
+
+slope = coef(lm_pulstryk)[1]
+slope
+
+summary(lm_pulstryk)    
+
+
+a = predictions-actual
+mean(a)
+
+
